@@ -172,3 +172,10 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+
+# ignore all TypeScript source files
+*.ts
+
+# ignore all PyTorch weight files
+*.pt

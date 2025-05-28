@@ -6,16 +6,23 @@ import random
 import cv2
 import numpy as np
 from ultralytics import YOLOE
+from pathlib import Path
+
+# ── BASE PATH FOR WEIGHTS ─────────────────────────────────────────────
+BASE_DIR     = Path(__file__).parent.resolve()
+WEIGHTS_PATH = BASE_DIR / "yoloe-11s-seg.pt"    # now always next to this file
+LOCAL_TEXT_TS = BASE_DIR / "mobileclip_blt.ts"
+
 
 # ── CONFIG ────────────────────────────────────────────────────────────
-_WEIGHTS    = os.environ.get("YOLOE_WEIGHTS", "yoloe-11s-seg.pt")
-_PROMPTS    = "crt screen, pole, traffic sign, neon light, milestone, payphone, tv genre, exit, flare, shape, warning sign, scoreboard, projection screen, speed limit sign, tv sitcom, score, flyer, basketball backboard, darkness, screen, hamburg, rectangle, triangle, torch, movie poster, ticket booth, portrait, parking sign, fixture, moth, sundial, road sign, tv drama, plaque, sign, billboard, stop at, hail, solar battery"
+_WEIGHTS    = os.environ.get("YOLOE_WEIGHTS", WEIGHTS_PATH)
+_PROMPTS    = "crt screen, pole, traffic sign, neon light, milestone, payphone, tv genre, exit, flare, shape, warning sign, scoreboard, projection screen, speed limit sign, tv sitcom, score, flyer, basketball backboard, screen, hamburg, rectangle, triangle, torch, movie poster, ticket booth, portrait, parking sign, fixture, moth, sundial, road sign, tv drama, plaque, sign, billboard, stop at, hail, solar battery"
 _CONF_THRESH = float(os.environ.get("YOLOE_CONF", 0.35))
 _DEVICE      = 0  # or "cuda:0"/"cpu"
 
 # ── SETUP ─────────────────────────────────────────────────────────────
 # load model ONCE
-_model = YOLOE(_WEIGHTS)
+_model = YOLOE(_WEIGHTS, str(LOCAL_TEXT_TS))
 
 # extract and register our prompt classes
 _names = [s.strip() for s in _PROMPTS.split(",") if s.strip()]

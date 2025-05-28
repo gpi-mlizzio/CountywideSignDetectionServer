@@ -10,18 +10,21 @@ from datetime import datetime
 import cv2
 import numpy as np
 
+
+from pathlib import Path
+
+# script_dir = folder that contains server.py
+script_dir    = Path(__file__).parent.resolve()
+INCOMING_DIR  = script_dir / "debug_tools" / "data" / "incoming"
+ANNOTATED_DIR = script_dir / "debug_tools" / "data" / "annotated"
+ANNOTATED_DIR.mkdir(parents=True, exist_ok=True)
+INCOMING_DIR.mkdir(parents=True, exist_ok=True)
+
 from yoloe.thumbnail_generator import predict_boxes, annotate_and_save
+
 
 # ── CONFIG ─────────────────────────────────────────────────────────────
 HOST, PORT       = "0.0.0.0", 5001
-INCOMING_DIR     = Path("./debug_tools/data/incoming")
-ANNOTATED_DIR    = Path("./debug_tools/data/annotated")
-INCOMING_DIR.mkdir(exist_ok=True)
-ANNOTATED_DIR.mkdir(exist_ok=True)
-
-# pyinstaller --onefile --name sign_server --add-data "yolo/yolo-11s-seg.pt;." server.py
-
-
 
 # message types
 TYPE_DETECT = 1
@@ -45,7 +48,7 @@ class ClientHandler(socketserver.BaseRequestHandler):
             # 1) read header
             hdr = recv_all(sock, 1 + 4)
             msg_type = hdr[0]
-            meta_len  = struct.unpack("!I", hdr[1:])[0]
+            meta_len  = struct.unpack("!i", hdr[1:])[0]
 
             # 2) optional JSON meta
             meta = {}
@@ -53,7 +56,7 @@ class ClientHandler(socketserver.BaseRequestHandler):
                 meta = json.loads(recv_all(sock, meta_len).decode())
 
             # 3) read image
-            img_len = struct.unpack("!I", recv_all(sock, 4))[0]
+            img_len = struct.unpack("!i", recv_all(sock, 4))[0]
             img_data = recv_all(sock, img_len)
             img = cv2.imdecode(
                 np.frombuffer(img_data, np.uint8),
@@ -100,3 +103,7 @@ class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 print(f"Listening on {HOST}:{PORT}")
 with ThreadedTCPServer((HOST, PORT), ClientHandler) as srv:
     srv.serve_forever()
+
+
+
+# pyinstaller --onefile --name sign_server --add-data "yolo/yolo-11s-seg.pt;." server.py

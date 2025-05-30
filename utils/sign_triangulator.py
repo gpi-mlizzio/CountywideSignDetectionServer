@@ -1,13 +1,13 @@
-#!/usr/bin/env python3
+# utils/sign_triangulator.py 
 import json
 import math
 from pathlib import Path
 from collections import defaultdict
 from datetime import datetime
+from pprint import pprint
+from typing import Dict, List, Any
 
-INPUT_JSON  = Path("./detections_e45.json")
-OUTPUT_VIEW  = Path("get_position/view_data.json")
-OUTPUT_JSON  = Path("interpolated_detections_with_distances.json")
+MERGE_THRESHOLD = 5
 
 # Ray lengths in meters
 HEADING_RAY_LEN = 20.0
@@ -161,91 +161,134 @@ class Locator:
         return {"pt":[lat_i,lon_i], "heading_ray":hray, "angle_rays":(ar1,ar2)}
 
 
-if __name__=="__main__":
-    raw = json.loads(INPUT_JSON.read_text())
+    # Extra json formatter and merger
+    def group_and_merge(self, raw) -> Dict[int, List[dict]]:
+        # 1) per-frame merge
+        cleaned_per_frame: Dict[str, List[dict]] = {}
+        for frame, info in raw.items():
+            merged: List[dict] = []
+            for det in info.get("detections", []):
+                # bbox center
+                left, top, w, h = det["bbox"].values()
+                cx, cy = left + w/2, top + h/2
+
+                for m in merged:
+                    if m["id"] != det["id"]:
+                        continue
+                    mx, my = m["_center"]
+                    if abs(cx - mx) <= MERGE_THRESHOLD and abs(cy - my) <= MERGE_THRESHOLD:
+                        # pick higher conf & fuse labels
+                        if det["conf"] > m["conf"]:
+                            m["conf"], m["bbox"] = det["conf"], det["bbox"]
+                        if det["label"] not in m["labels"]:
+                            m["labels"].append(det["label"])
+                        break
+                else:
+                    entry = det.copy()
+                    entry["labels"] = [det["label"]]
+                    entry["_center"] = (cx, cy)
+                    merged.append(entry)
+
+            # strip helper key
+            for m in merged:
+                del m["_center"]
+            cleaned_per_frame[frame] = merged
+
+        # 2) flatten by id
+        by_id: Dict[int, List[dict]] = defaultdict(list)
+        for frame, info in raw.items():
+            lat, lon, ts = info["latitude"], info["longitude"], info["timestamp"]
+            for det in cleaned_per_frame[frame]:
+                record = {
+                    **det,
+                    "frame":     frame,
+                    "latitude":  lat,
+                    "longitude": lon,
+                    "timestamp": ts,
+                }
+                record.pop("label", None)
+                by_id[record["id"]].append(record)
+
+        return by_id
+
+    def main(self, detections=None, detections_path=None):
+        raw = None
+
+        # Load & filter
+        if detections_path:
+            path = Path(detections_path)
+            with path.open() as f:
+                raw = json.load(f)
+            detections = self.filter_detections(raw)
+
+        elif detections:
+            raw = {"frame": {"latitude": d["latitude"],
+                        "longitude": d["longitude"],
+                        "detections": []}
+                for lst in detections.values() for d in lst}
+            detections = self.filter_detections(detections)
+
+        else:
+            return None
+
+        pprint(detections)
+
+        # Prepare intersection methods
+        methods = {
+            "first_two": self.retrieve_first_two(detections),
+            "last_two":  self.retrieve_last_two(detections),
+            "closest":   self.retrieve_closest(detections),
+            "furthest":  self.retrieve_furthest(detections),
+        }
+
+        # Compute fused intersections
+        fused = {}
+        for det_id in detections:
+            pts = {}
+            for name, pairs in methods.items():
+                p1, p2 = pairs.get(det_id, (None, None))
+                if not p1 or not p2:
+                    continue
+                res = self.intersect(p1, p2)
+                if res:
+                    pts[name] = res["pt"]
+            if not pts:
+                continue
+            W = sum(WEIGHTS[n] for n in pts)
+            fused[det_id] = (
+                sum(pts[n][0] * WEIGHTS[n] for n in pts) / W,
+                sum(pts[n][1] * WEIGHTS[n] for n in pts) / W
+            )
+
+        # Now augment the **raw** JSON with distances
+        for frame_key, frame_info in raw.items():
+            cam_lat = frame_info["latitude"]
+            cam_lon = frame_info["longitude"]
+            for det in frame_info.get("detections", []):
+                det_id = det["id"]
+                if det_id not in fused:
+                    continue
+                obj_lat, obj_lon = fused[det_id]
+                e, n = self.latlon_to_enu(obj_lat, obj_lon, cam_lat, cam_lon)
+                hyp = math.hypot(e, n)
+                det["distance"]      = float(hyp)
+                det["enu_east_m"]    = float(e)
+                det["enu_north_m"]   = float(n)
+                det["sign_location"] = {"latitude": obj_lat, "longitude": obj_lon}
+
+
+        # (Optional) write back to file or return the augmented JSON
+        return raw
+
+
+if __name__ == "__main__":
     loc = Locator()
-    dets = loc.filter_detections(raw)
+    computed_detections = loc.main(detections_path=Path("../data/tracks/track_5AC9A5EC/detections.json"))
+    # for example, save it:
+    with open("augmented_detections.json", "w") as out:
+        json.dump(computed_detections, out, indent=2)
 
-    methods = {
-        "first_two": loc.retrieve_first_two(dets),
-        "last_two":  loc.retrieve_last_two(dets),
-        "closest":   loc.retrieve_closest(dets),
-        "furthest":  loc.retrieve_furthest(dets),
-    }
+    grouped = loc.group_and_merge(computed_detections)
+    with open("grouped_by_id.json", "w") as f:
+        json.dump(grouped, f, indent=2)
 
-    # compute fused intersections
-    fused = {}
-    for det_id in dets:
-        pts = {}
-        for name,pair in methods.items():
-            p1,p2 = pair.get(det_id,(None,None))
-            if not p1 or not p2: continue
-            res = loc.intersect(p1,p2)
-            if res: pts[name] = res["pt"]
-        if not pts: continue
-        W = sum(WEIGHTS[n] for n in pts)
-        fused[det_id] = (
-            sum(pts[n][0]*WEIGHTS[n] for n in pts)/W,
-            sum(pts[n][1]*WEIGHTS[n] for n in pts)/W
-        )
-
-    # build view_data.json as before
-    colors = {
-        "first_two":"#FF8800","last_two":"#8800FF",
-        "closest":"#00CCCC","furthest":"#CC00CC"
-    }
-    view_pts, view_lines = [], []
-    for det_id in dets:
-        # plot each method + rays, then fused
-        for name,pair in methods.items():
-            p1,p2 = pair.get(det_id,(None,None))
-            if not p1 or not p2: continue
-            res = loc.intersect(p1,p2)
-            if not res: continue
-            col = colors[name]
-            view_pts.append({"coords":res["pt"],"label":f"{det_id}:{name}","color":col})
-            if res["heading_ray"]:
-                view_lines.append({"coords":res["heading_ray"],"color":"#800080"})
-            ar1,ar2 = res["angle_rays"]
-            view_lines.append({"coords":ar1,"color":col})
-            view_lines.append({"coords":ar2,"color":col})
-        lat,lon = fused[det_id]
-        view_pts.append({"coords":[lat,lon],"label":f"{det_id}:fused","color":"#FFFF00"})
-        # connect method pts
-        # instead of the broken line, do:
-        pts = []
-        for name, method_dict in methods.items():
-            pair = method_dict.get(det_id)
-            if not pair:
-                continue
-            p1, p2 = pair
-            res = loc.intersect(p1, p2)
-            if res:
-                pts.append(res["pt"])
-
-                view_lines.append({"coords":pts,"color":"#444444"})
-
-    # write view_data
-    center = view_pts[0]["coords"] if view_pts else [0,0]
-    OUTPUT_VIEW.write_text(json.dumps({
-        "points":view_pts,"lines":view_lines,"center":center,"zoom":18
-    }, indent=2))
-
-    # now augment the raw JSON with distances
-    for frame, info in raw.items():
-        cam_lat, cam_lon = info["latitude"], info["longitude"]
-        for det in info.get("detections", []):
-            det_id = det["id"]
-            if det_id not in fused:
-                continue
-            obj_lat, obj_lon = fused[det_id]
-            e,n = loc.latlon_to_enu(obj_lat, obj_lon, cam_lat, cam_lon)
-            hyp = math.hypot(e,n)
-            det["distance"]    = float(hyp)
-            det["enu_east_m"]  = float(e)
-            det["enu_north_m"] = float(n)
-
-    # write augmented input
-    OUTPUT_JSON.write_text(json.dumps(raw, indent=2))
-    print(f"✅ Wrote view data → {OUTPUT_VIEW}")
-    print(f"✅ Augmented detections → {OUTPUT_JSON}")

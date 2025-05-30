@@ -1,102 +1,116 @@
-#!/usr/bin/env python3
-import json, math
+# utils/sign_dimensions.py
+import json
+import math
 import statistics
 from pathlib import Path
 from collections import defaultdict
-import pprint
 
-# ───── INPUT / OUTPUT ─────────────────────────────────────
-INPUT_JSON  = Path("interpolated_detections_with_distances.json")
-OUTPUT_SUM  = Path("detections_summary_e45.json")
 
-# ───── YOUR REFERENCE DATA & FORMULAS ─────────────────────
-measurements = {
-    60: {'width': 29, 'height': 35},
-    20: {'width': 76, 'height': 80},
-}
+class DetectionSummary:
+    def __init__(self):
+        # calibration parameters
+        measurements = {
+            60: {'width': 29, 'height': 35},
+            20: {'width': 76, 'height': 80},
+        }
+        REF_DIST_FT = 40.0
+        F2_HT = measurements[20]['height']
+        F1_HT = measurements[60]['height']
+        # focal length in px
+        self.FPX = (REF_DIST_FT * F1_HT * F2_HT) / (2.0 * (F2_HT - F1_HT))
+        self.reference_width = measurements[20]['width']
+        self.reference_height = measurements[20]['height']
 
-def calc_focal_length_from_known_height(p1, p2, d, known_height):
-    return (d * p1 * p2) / (known_height * (p2 - p1))
-
-def sign_height(p1, p2, d, f_px):
-    return (d * p1 * p2) / (f_px * (p2 - p1))
-
-# calibrate focal length using 60 ft vs 20 ft and a 2 ft sign
-REF_DIST_FT = 40.0
-F2_HT = measurements[20]['height']
-F1_HT = measurements[60]['height']
-F2_WD = measurements[20]['width']
-F1_WD = measurements[60]['width']
-FPX = calc_focal_length_from_known_height(F1_HT, F2_HT, REF_DIST_FT, 2.0)
-
-# ───── HELPER TO PROJECT ENU BACK TO LAT/LON ─────────────
-class Geo:
-    R = 6371000
     @staticmethod
     def enu_to_latlon(east, north, ref_lat, ref_lon):
-        lat = ref_lat + math.degrees(north/Geo.R)
-        lon = ref_lon + math.degrees(east/(Geo.R * math.cos(math.radians(ref_lat))))
+        R = 6371000
+        lat = ref_lat + math.degrees(north / R)
+        lon = ref_lon + math.degrees(east / (R * math.cos(math.radians(ref_lat))))
         return lat, lon
 
-# ───── AGGREGATE OBSERVATIONS ─────────────────────────────
-agg = defaultdict(lambda: {
-    "lats": [], "lons": [], "heights": [], "widths": []
-})
+    def sign_height(self, p1, p2, d):
+        # returns size in feet
+        return (d * p1 * p2) / (self.FPX * (p2 - p1))
 
-data = json.loads(INPUT_JSON.read_text())
+    def process(self, data) -> dict:
+        """
+        Takes a frame-sorted detection dict (loaded JSON), 
+        returns a summary dict keyed by sign ID.
+        """
+        agg = defaultdict(lambda: {
+            "lats": [], "lons": [], "heights": [], "widths": []
+        })
 
-for frame, info in data.items():
-    cam_lat, cam_lon = info["latitude"], info["longitude"]
-    for det in info.get("detections", []):
-        if "distance" not in det or "enu_east_m" not in det:
-            continue
-        sid = str(det["id"])
-        # back-project GPS
-        lat_s, lon_s = Geo.enu_to_latlon(
-            det["enu_east_m"], det["enu_north_m"], cam_lat, cam_lon
-        )
-        dist_ft = det["distance"] / 0.3048
+        for frame, info in data.items():
+            cam_lat = info["latitude"]
+            cam_lon = info["longitude"]
 
-        # estimate sign size via your two-photo formula
-        h_ft = abs(sign_height(
-            p1 = det["bbox"]["height"],
-            p2 = F2_HT,
-            d  = abs(dist_ft - 20),
-            f_px = FPX
-        ))
-        w_ft = abs(sign_height(
-            p1 = det["bbox"]["width"],
-            p2 = F2_WD,
-            d  = abs(dist_ft - 20),
-            f_px = FPX
-        ))
+            for det in info.get("detections", []):
+                if "distance" not in det or "enu_east_m" not in det:
+                    continue
 
-        agg[sid]["lats"].append(lat_s)
-        agg[sid]["lons"].append(lon_s)
-        agg[sid]["heights"].append(h_ft)
-        agg[sid]["widths"].append(w_ft)
+                sid = str(det.get("sign_id", det["id"]))
 
-pprint.pprint(agg)
+                # use precomputed location if present
+                if "sign_location" in det:
+                    lat_s = det["sign_location"]["latitude"]
+                    lon_s = det["sign_location"]["longitude"]
+                else:
+                    lat_s, lon_s = self.enu_to_latlon(
+                        det["enu_east_m"], det["enu_north_m"], cam_lat, cam_lon
+                    )
 
-# ───── COMPUTE MEDIAN PER SIGN ID ─────────────────────────
-summary = {}
-for sid, vals in agg.items():
-    # median latitude/longitude
-    med_lat = statistics.median(vals["lats"])
-    med_lon = statistics.median(vals["lons"])
-    # median height/width
-    med_h  = statistics.median(vals["heights"])
-    med_w  = statistics.median(vals["widths"])
+                dist_ft = det["distance"] / 0.3048
 
-    med_h  = min(vals["heights"])*12
-    med_w  = min(vals["widths"])*12
+                h_ft = abs(self.sign_height(
+                    p1=det["bbox"]["height"],
+                    p2=self.reference_height,
+                    d=abs(dist_ft - 20)
+                ))
+                w_ft = abs(self.sign_height(
+                    p1=det["bbox"]["width"],
+                    p2=self.reference_width,
+                    d=abs(dist_ft - 20)
+                ))
 
-    summary[sid] = {
-        "latitude":             round(med_lat,  8),
-        "longitude":            round(med_lon,  8),
-        "estimated_height_inches":  round(med_h, 2),
-        "estimated_width_inches":   round(med_w, 2)
-    }
+                agg[sid]["lats"].append(lat_s)
+                agg[sid]["lons"].append(lon_s)
+                agg[sid]["heights"].append(h_ft)
+                agg[sid]["widths"].append(w_ft)
 
-OUTPUT_SUM.write_text(json.dumps(summary, indent=2))
-print(f"✅ Wrote aggregated summary with medians → {OUTPUT_SUM}")
+        # build summary
+        summary = {}
+        for sid, vals in agg.items():
+            med_lat = statistics.median(vals["lats"])
+            med_lon = statistics.median(vals["lons"])
+            med_h   = min(vals["heights"]) * 12  # inches
+            med_w   = min(vals["widths"])  * 12  # inches
+
+            summary[sid] = {
+                "latitude": round(med_lat, 8),
+                "longitude": round(med_lon, 8),
+                "estimated_height_inches": round(med_h, 2),
+                "estimated_width_inches":  round(med_w, 2),
+            }
+
+        return summary
+
+
+def main():
+    # load frame-sorted detections
+    data = json.loads(Path("./augmented_detections.json").read_text())
+
+    # compute summary
+    summarizer = DetectionSummary()
+    summary = summarizer.process(data)
+
+    # save to file
+    Path("./final_info.json").write_text(json.dumps(summary, indent=2))
+    print(f"✅ Wrote aggregated summary → {Path("./final_info.json")}")
+
+    # return summary dict if needed elsewhere
+    return summary
+
+
+if __name__ == "__main__":
+    main()

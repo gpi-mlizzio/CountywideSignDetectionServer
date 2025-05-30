@@ -191,107 +191,107 @@ def perform_segment_tracking(track_id: str, frames_dir: str):
     return results
 
 # ─── match reference image to an existing track ────────────────────────
-from pathlib import Path
-import torch
+def match_reference_to_track(
+        ref, 
+        track_id: str, 
+        sim_threshold: float = 0.15, 
+        delta: float = 0.1, 
+        max_images: int = 4
+    ):
+    """
+    As before, but when a sub-track has no i-th image, subtract 0.015
+    from its last sim (or from 0.0 if none) instead of dropping it.
+    """
+    # prepare debug folder
+    debug_dir = Path(f"{BASE_DIR}/../data/tracks/track_{track_id}") / "match_debug"
+    if debug_dir.exists():
+        shutil.rmtree(debug_dir)
+    debug_dir.mkdir(parents=True)
 
-def match_reference_to_track(ref, track_id: str, sim_threshold: float = .15, delta: float = 0.1, max_images: int = 4):
-    """
-    Given a reference image (path or PIL.Image) and a track_id (folder name),
-    search its subfolders under ../data/tracks/track_<track_id>/detections/
-    to find which sub-track best matches. Checks up to `max_images` per sub-track,
-    pruning those that fail the first two. Early exits if one lead exceeds runner-up
-    by >= delta. Returns a dict:
-      {
-        "subtrack": <subfolder name>,
-        "image":    <best image path>,
-        "similarity": <float>
-      }
-    or None if no sub-track clears sim_threshold on its first image.
-    """
-    # load reference and feature
     from PIL import Image
+    # save ref image
     if isinstance(ref, str):
         ref_img = Image.open(ref)
     else:
         ref_img = ref
-    ref_vec = feat_vec(ref_img)  # shape [1,128]
+    ref_img.save(debug_dir/"ref_image.png")
+    ref_vec = feat_vec(ref_img)
 
-    # locate sub-track folders
-    base = Path(f"{BASE_DIR}/../data/tracks")/f"track_{track_id}"/"detections"
-    print(base)
-    if not base.exists(): 
-        print("bad base path")
+    base    = Path(f"{BASE_DIR}/../data/tracks")/f"track_{track_id}"/"detections"
+    print("DEBUG: matching in", base, flush=True)
+    if not base.exists():
+        print("DEBUG: no detections folder", flush=True)
         return None
-    subdirs = sorted([d for d in base.iterdir() if d.is_dir()])
 
-    # prepare candidate state
-    sims = {d.name: [] for d in subdirs}
-    best_overall = {"subtrack":None, "image":None, "similarity":0.0}
+    subdirs     = sorted(d for d in base.iterdir() if d.is_dir())
+    sims        = {d.name: [] for d in subdirs}
+    best_overall= {"subtrack":None, "image":None, "similarity":0.0}
 
-    # interleaved rounds with debug
+    PENALTY = 0.015
+
     for i in range(max_images):
-        print(f"\n=== Round {i+1} ===", flush=True)
+        print(f"\n--- ROUND {i+1} ---", flush=True)
         round_sims = {}
 
-        # 1) compute similarity for the i-th image of each candidate
-        for d in list(sims.keys()):
-            imgs = sorted((base/d).glob("*.png"))
-            if i >= len(imgs):
-                print(f"  [{d}] no image #{i+1}, dropping from sims", flush=True)
-                sims.pop(d)
-                continue
+        for sub in sims:
+            imgs = sorted((base/sub).glob("*.png"))
+            if i < len(imgs):
+                img_path = imgs[i]
+                print(f"  [{sub}] testing {img_path.name}", flush=True)
+                crop = Image.open(img_path)
+                crop.save(debug_dir/f"{sub}_r{i+1}.png")
 
-            print(f"  [{d}] checking image: {imgs[i].name}", flush=True)
-            img = Image.open(imgs[i])
-            vec = feat_vec(img)
-            sim = float(torch.matmul(ref_vec, vec.T))
-            sims[d].append(sim)
-            round_sims[d] = sim
-            print(f"    similarity = {sim:.4f}", flush=True)
+                vec = feat_vec(crop)
+                sim = float(torch.matmul(ref_vec, vec.T))
+                print(f"    sim = {sim:.4f}", flush=True)
+            else:
+                # no image: apply a small penalty
+                last = sims[sub][-1] if sims[sub] else 0.0
+                sim = last - PENALTY
+                print(f"  [{sub}] no image #{i+1}, penalize {last:.4f}→{sim:.4f}", flush=True)
+                # save placeholder
+                Image.new("RGB", (100,100)).save(debug_dir/f"{sub}_r{i+1}_P.png")
 
+            sims[sub].append(sim)
+            round_sims[sub] = sim
+
+        # prune by threshold only (no hard-dropping for missing)
+        if i < 2:
+            for sub in list(sims):
+                if sims[sub][-1] < sim_threshold:
+                    print(f"  [{sub}] sim {sims[sub][-1]:.4f} < threshold; pruning", flush=True)
+                    sims.pop(sub)
             if not sims:
-                print("  no more candidates, breaking out", flush=True)
+                print("  all pruned early", flush=True)
                 break
 
-            # 2) prune early if in first two rounds
-            if i < 2:
-                to_drop = [d for d, lst in sims.items() if len(lst)==i+1 and lst[-1] < sim_threshold]
-                for d in to_drop:
-                    print(f"  [{d}] below threshold {sim_threshold} in round {i+1}, pruning", flush=True)
-                    sims.pop(d)
+        if not sims:
+            print("  no candidates left", flush=True)
+            break
 
-            if not sims:
-                print("  all candidates pruned, breaking", flush=True)
-                break
+        # identify leader & runner-up
+        sorted_round = sorted(round_sims.items(), key=lambda kv:kv[1], reverse=True)
+        leader, lead_sim = sorted_round[0]
+        runner_sim = sorted_round[1][1] if len(sorted_round)>1 else 0.0
+        print(f"  Leader: {leader} ({lead_sim:.4f}), Runner-up: {runner_sim:.4f}", flush=True)
 
-            # 3) determine leader and runner-up this round
-            sorted_round = sorted(round_sims.items(), key=lambda kv: kv[1], reverse=True)
-            leader, lead_sim = sorted_round[0]
-            runner_sim = sorted_round[1][1] if len(sorted_round)>1 else 0.0
-            print(f"  Leader: {leader} ({lead_sim:.4f}), Runner-up: {runner_sim:.4f}", flush=True)
+        # update best overall
+        if lead_sim > best_overall["similarity"]:
+            first_img = sorted((base/leader).glob("*.png"))[0].name
+            best_overall.update({
+                "subtrack":   leader,
+                "image":      str(base/leader/first_img),
+                "similarity": lead_sim
+            })
+            print(f"  New best_overall: {best_overall}", flush=True)
 
-            # 4) update best_overall if this leader is new best
-            if lead_sim > best_overall["similarity"]:
-                first_img = next((base/leader).glob("*.png")).name
-                best_overall.update({
-                    "subtrack":   leader,
-                    "image":      str(base/leader/first_img),
-                    "similarity": lead_sim
-                })
-                print(f"  New best_overall → {best_overall}", flush=True)
-
-            # 5) early exit if leader clearly ahead
-            if lead_sim >= sim_threshold and (lead_sim - runner_sim) >= delta:
-                print(f"  Leader {leader} ahead by {(lead_sim - runner_sim):.4f} ≥ delta {delta}, exiting early", flush=True)
-                return best_overall
-
-        # final check after rounds
-        print(f"\nFinal best_overall: {best_overall}", flush=True)
-        if best_overall["similarity"] >= sim_threshold:
+        # early exit if clearly ahead
+        if lead_sim >= sim_threshold and (lead_sim - runner_sim) >= delta:
+            print(f"  Exiting early: Δ={lead_sim-runner_sim:.4f} ≥ {delta}", flush=True)
             return best_overall
 
-        print("No sub-track exceeded threshold, returning None", flush=True)
-        return None
+    print(f"\nFINAL best_overall: {best_overall}", flush=True)
+    return best_overall if best_overall["similarity"] >= sim_threshold else None
 
 
 

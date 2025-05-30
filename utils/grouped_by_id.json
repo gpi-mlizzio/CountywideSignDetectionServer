@@ -1,0 +1,580 @@
+{
+  "1": [
+    {
+      "id": 1,
+      "bbox": {
+        "left": 1083,
+        "top": 525,
+        "width": 59,
+        "height": 87
+      },
+      "conf": 0.534,
+      "labels": [
+        "road sign",
+        "speed limit sign"
+      ],
+      "frame": "00_gps.png",
+      "latitude": 40.688981,
+      "longitude": -73.344499,
+      "timestamp": "2025-05-28T07:33:58.1570913"
+    }
+  ],
+  "2": [
+    {
+      "id": 2,
+      "bbox": {
+        "left": 496,
+        "top": 611,
+        "width": 21,
+        "height": 14
+      },
+      "conf": 0.4492,
+      "labels": [
+        "traffic sign"
+      ],
+      "frame": "01_gps.png",
+      "latitude": 40.689075,
+      "longitude": -73.344531,
+      "timestamp": "2025-05-28T07:33:59.3151198"
+    }
+  ],
+  "3": [
+    {
+      "id": 3,
+      "bbox": {
+        "left": 998,
+        "top": 626,
+        "width": 26,
+        "height": 14
+      },
+      "conf": 0.6341,
+      "distance": 23.889761983510457,
+      "enu_east_m": -1.2328367302966827,
+      "enu_north_m": 23.85793036340774,
+      "sign_location": {
+        "latitude": 40.689472559522486,
+        "longitude": -73.34459462192002
+      },
+      "labels": [
+        "traffic sign"
+      ],
+      "frame": "04_gps.png",
+      "latitude": 40.689258,
+      "longitude": -73.34458,
+      "timestamp": "2025-05-28T07:34:01.6249819"
+    },
+    {
+      "id": 3,
+      "bbox": {
+        "left": 1003,
+        "top": 622,
+        "width": 28,
+        "height": 15
+      },
+      "conf": 0.5421,
+      "distance": 22.7378440271968,
+      "enu_east_m": -0.9884288256810055,
+      "enu_north_m": 22.716350047084855,
+      "sign_location": {
+        "latitude": 40.689472559522486,
+        "longitude": -73.34459462192002
+      },
+      "labels": [
+        "traffic sign"
+      ],
+      "frame": "05_interpolate.png",
+      "latitude": 40.689268266478436,
+      "longitude": -73.34458289877038,
+      "timestamp": "2025-05-28T07:34:01.7636376"
+    },
+    {
+      "id": 3,
+      "bbox": {
+        "left": 1017,
+        "top": 614,
+        "width": 33,
+        "height": 17
+      },
+      "conf": 0.4523,
+      "distance": 20.507029251318883,
+      "enu_east_m": -0.5140424900869567,
+      "enu_north_m": 20.500585577803225,
+      "sign_location": {
+        "latitude": 40.689472559522486,
+        "longitude": -73.34459462192002
+      },
+      "labels": [
+        "traffic sign"
+      ],
+      "frame": "06_interpolate.png",
+      "latitude": 40.689288193327044,
+      "longitude": -73.34458852517469,
+      "timestamp": "2025-05-28T07:34:02.0327631"
+    },
+    {
+      "id": 3,
+      "bbox": {
+        "left": 1029,
+        "top": 609,
+        "width": 33,
+        "height": 17
+      },
+      "conf": 0.6102,
+      "distance": 19.308422744900568,
+      "enu_east_m": -0.2584349983473232,
+      "enu_north_m": 19.306693146352714,
+      "sign_location": {
+        "latitude": 40.689472559522486,
+        "longitude": -73.34459462192002
+      },
+      "labels": [
+        "traffic sign"
+      ],
+      "frame": "07_interpolate.png",
+      "latitude": 40.68929893025963,
+      "longitude": -73.34459155677919,
+      "timestamp": "2025-05-28T07:34:02.1777726"
+    },
+    {
+      "id": 3,
+      "bbox": {
+        "left": 1045,
+        "top": 608,
+        "width": 38,
+        "height": 19
+      },
+      "conf": 0.4671,
+      "distance": 17.182195272832157,
+      "enu_east_m": 0.1966520513120614,
+      "enu_north_m": 17.18106988416177,
+      "sign_location": {
+        "latitude": 40.689472559522486,
+        "longitude": -73.34459462192002
+      },
+      "labels": [
+        "traffic sign"
+      ],
+      "frame": "08_interpolate.png",
+      "latitude": 40.68931804644889,
+      "longitude": -73.34459695429145,
+      "timestamp": "2025-05-28T07:34:02.4359496"
+    },
+    {
+      "id": 3,
+      "bbox": {
+        "left": 1083,
+        "top": 586,
+        "width": 45,
+        "height": 24
+      },
+      "conf": 0.6165,
+      "distance": 14.428044533717866,
+      "enu_east_m": 0.7907050980785838,
+      "enu_north_m": 14.406361598780538,
+      "sign_location": {
+        "latitude": 40.689472559522486,
+        "longitude": -73.34459462192002
+      },
+      "labels": [
+        "traffic sign"
+      ],
+      "frame": "09_gps.png",
+      "latitude": 40.689343,
+      "longitude": -73.344604,
+      "timestamp": "2025-05-28T07:34:02.7729641"
+    },
+    {
+      "id": 3,
+      "bbox": {
+        "left": 1097,
+        "top": 580,
+        "width": 49,
+        "height": 24
+      },
+      "conf": 0.6106,
+      "distance": 14.428044533717866,
+      "enu_east_m": 0.7907050980785838,
+      "enu_north_m": 14.406361598780538,
+      "sign_location": {
+        "latitude": 40.689472559522486,
+        "longitude": -73.34459462192002
+      },
+      "labels": [
+        "traffic sign"
+      ],
+      "frame": "10_interpolate.png",
+      "latitude": 40.689343,
+      "longitude": -73.344604,
+      "timestamp": "2025-05-28T07:34:02.8326983"
+    },
+    {
+      "id": 3,
+      "bbox": {
+        "left": 1146,
+        "top": 556,
+        "width": 57,
+        "height": 31
+      },
+      "conf": 0.5038,
+      "distance": 14.428044533717866,
+      "enu_east_m": 0.7907050980785838,
+      "enu_north_m": 14.406361598780538,
+      "sign_location": {
+        "latitude": 40.689472559522486,
+        "longitude": -73.34459462192002
+      },
+      "labels": [
+        "traffic sign"
+      ],
+      "frame": "11_interpolate.png",
+      "latitude": 40.689343,
+      "longitude": -73.344604,
+      "timestamp": "2025-05-28T07:34:03.1578892"
+    },
+    {
+      "id": 3,
+      "bbox": {
+        "left": 1178,
+        "top": 541,
+        "width": 65,
+        "height": 34
+      },
+      "conf": 0.5869,
+      "distance": 14.428044533717866,
+      "enu_east_m": 0.7907050980785838,
+      "enu_north_m": 14.406361598780538,
+      "sign_location": {
+        "latitude": 40.689472559522486,
+        "longitude": -73.34459462192002
+      },
+      "labels": [
+        "traffic sign"
+      ],
+      "frame": "12_interpolate.png",
+      "latitude": 40.689343,
+      "longitude": -73.344604,
+      "timestamp": "2025-05-28T07:34:03.3015617"
+    },
+    {
+      "id": 3,
+      "bbox": {
+        "left": 1218,
+        "top": 521,
+        "width": 74,
+        "height": 42
+      },
+      "conf": 0.5718,
+      "distance": 9.603527922087078,
+      "enu_east_m": 1.9542394242006333,
+      "enu_north_m": 9.402589899767305,
+      "sign_location": {
+        "latitude": 40.689472559522486,
+        "longitude": -73.34459462192002
+      },
+      "labels": [
+        "traffic sign",
+        "road sign"
+      ],
+      "frame": "13_snapshot.png",
+      "latitude": 40.689388,
+      "longitude": -73.3446178,
+      "timestamp": "2025-05-28T07:34:03.3861961"
+    }
+  ],
+  "4": [
+    {
+      "id": 4,
+      "bbox": {
+        "left": 997,
+        "top": 582,
+        "width": 42,
+        "height": 40
+      },
+      "conf": 0.383,
+      "distance": 22.145187812777433,
+      "enu_east_m": -1.4659584883023702,
+      "enu_north_m": 22.096613065665977,
+      "sign_location": {
+        "latitude": 40.68946698609391,
+        "longitude": -73.34460028560723
+      },
+      "labels": [
+        "road sign"
+      ],
+      "frame": "05_interpolate.png",
+      "latitude": 40.689268266478436,
+      "longitude": -73.34458289877038,
+      "timestamp": "2025-05-28T07:34:01.7636376"
+    },
+    {
+      "id": 4,
+      "bbox": {
+        "left": 1009,
+        "top": 567,
+        "width": 45,
+        "height": 48
+      },
+      "conf": 0.3901,
+      "distance": 19.90556093063436,
+      "enu_east_m": -0.9915720099113962,
+      "enu_north_m": 19.880848596384343,
+      "sign_location": {
+        "latitude": 40.68946698609391,
+        "longitude": -73.34460028560723
+      },
+      "labels": [
+        "road sign"
+      ],
+      "frame": "06_interpolate.png",
+      "latitude": 40.689288193327044,
+      "longitude": -73.34458852517469,
+      "timestamp": "2025-05-28T07:34:02.0327631"
+    },
+    {
+      "id": 4,
+      "bbox": {
+        "left": 1020,
+        "top": 559,
+        "width": 49,
+        "height": 50
+      },
+      "conf": 0.4805,
+      "distance": 18.701443109260687,
+      "enu_east_m": -0.7359644412302719,
+      "enu_north_m": 18.686956164933836,
+      "sign_location": {
+        "latitude": 40.68946698609391,
+        "longitude": -73.34460028560723
+      },
+      "labels": [
+        "traffic sign",
+        "road sign"
+      ],
+      "frame": "07_interpolate.png",
+      "latitude": 40.68929893025963,
+      "longitude": -73.34459155677919,
+      "timestamp": "2025-05-28T07:34:02.1777726"
+    },
+    {
+      "id": 4,
+      "bbox": {
+        "left": 1034,
+        "top": 550,
+        "width": 56,
+        "height": 57
+      },
+      "conf": 0.5219,
+      "distance": 16.563714545584762,
+      "enu_east_m": -0.2808772545831086,
+      "enu_north_m": 16.561332902742887,
+      "sign_location": {
+        "latitude": 40.68946698609391,
+        "longitude": -73.34460028560723
+      },
+      "labels": [
+        "road sign"
+      ],
+      "frame": "08_interpolate.png",
+      "latitude": 40.68931804644889,
+      "longitude": -73.34459695429145,
+      "timestamp": "2025-05-28T07:34:02.4359496"
+    },
+    {
+      "id": 4,
+      "bbox": {
+        "left": 1069,
+        "top": 514,
+        "width": 69,
+        "height": 70
+      },
+      "conf": 0.6013,
+      "distance": 13.79018120000081,
+      "enu_east_m": 0.3131759710021636,
+      "enu_north_m": 13.786624617361662,
+      "sign_location": {
+        "latitude": 40.68946698609391,
+        "longitude": -73.34460028560723
+      },
+      "labels": [
+        "road sign"
+      ],
+      "frame": "09_gps.png",
+      "latitude": 40.689343,
+      "longitude": -73.344604,
+      "timestamp": "2025-05-28T07:34:02.7729641"
+    },
+    {
+      "id": 4,
+      "bbox": {
+        "left": 1081,
+        "top": 502,
+        "width": 74,
+        "height": 76
+      },
+      "conf": 0.5473,
+      "distance": 13.79018120000081,
+      "enu_east_m": 0.3131759710021636,
+      "enu_north_m": 13.786624617361662,
+      "sign_location": {
+        "latitude": 40.68946698609391,
+        "longitude": -73.34460028560723
+      },
+      "labels": [
+        "road sign"
+      ],
+      "frame": "10_interpolate.png",
+      "latitude": 40.689343,
+      "longitude": -73.344604,
+      "timestamp": "2025-05-28T07:34:02.8326983"
+    },
+    {
+      "id": 4,
+      "bbox": {
+        "left": 1125,
+        "top": 461,
+        "width": 90,
+        "height": 94
+      },
+      "conf": 0.5274,
+      "distance": 13.79018120000081,
+      "enu_east_m": 0.3131759710021636,
+      "enu_north_m": 13.786624617361662,
+      "sign_location": {
+        "latitude": 40.68946698609391,
+        "longitude": -73.34460028560723
+      },
+      "labels": [
+        "road sign",
+        "sign"
+      ],
+      "frame": "11_interpolate.png",
+      "latitude": 40.689343,
+      "longitude": -73.344604,
+      "timestamp": "2025-05-28T07:34:03.1578892"
+    },
+    {
+      "id": 4,
+      "bbox": {
+        "left": 1154,
+        "top": 434,
+        "width": 102,
+        "height": 105
+      },
+      "conf": 0.6868,
+      "distance": 13.79018120000081,
+      "enu_east_m": 0.3131759710021636,
+      "enu_north_m": 13.786624617361662,
+      "sign_location": {
+        "latitude": 40.68946698609391,
+        "longitude": -73.34460028560723
+      },
+      "labels": [
+        "road sign",
+        "sign"
+      ],
+      "frame": "12_interpolate.png",
+      "latitude": 40.689343,
+      "longitude": -73.344604,
+      "timestamp": "2025-05-28T07:34:03.3015617"
+    },
+    {
+      "id": 4,
+      "bbox": {
+        "left": 1192,
+        "top": 400,
+        "width": 114,
+        "height": 120
+      },
+      "conf": 0.6935,
+      "distance": 8.906131575458168,
+      "enu_east_m": 1.476710619597332,
+      "enu_north_m": 8.782852918348427,
+      "sign_location": {
+        "latitude": 40.68946698609391,
+        "longitude": -73.34460028560723
+      },
+      "labels": [
+        "road sign",
+        "sign"
+      ],
+      "frame": "13_snapshot.png",
+      "latitude": 40.689388,
+      "longitude": -73.3446178,
+      "timestamp": "2025-05-28T07:34:03.3861961"
+    }
+  ],
+  "5": [
+    {
+      "id": 5,
+      "bbox": {
+        "left": 1070,
+        "top": 513,
+        "width": 68,
+        "height": 240
+      },
+      "conf": 0.4454,
+      "distance": 12.15127334883576,
+      "enu_east_m": -0.551848914774298,
+      "enu_north_m": 12.138735797989371,
+      "sign_location": {
+        "latitude": 40.68945216627372,
+        "longitude": -73.34461054514973
+      },
+      "labels": [
+        "stop at"
+      ],
+      "frame": "09_gps.png",
+      "latitude": 40.689343,
+      "longitude": -73.344604,
+      "timestamp": "2025-05-28T07:34:02.7729641"
+    },
+    {
+      "id": 5,
+      "bbox": {
+        "left": 1126,
+        "top": 462,
+        "width": 88,
+        "height": 316
+      },
+      "conf": 0.4148,
+      "distance": 12.15127334883576,
+      "enu_east_m": -0.551848914774298,
+      "enu_north_m": 12.138735797989371,
+      "sign_location": {
+        "latitude": 40.68945216627372,
+        "longitude": -73.34461054514973
+      },
+      "labels": [
+        "stop at"
+      ],
+      "frame": "11_interpolate.png",
+      "latitude": 40.689343,
+      "longitude": -73.344604,
+      "timestamp": "2025-05-28T07:34:03.1578892"
+    },
+    {
+      "id": 5,
+      "bbox": {
+        "left": 1193,
+        "top": 401,
+        "width": 112,
+        "height": 406
+      },
+      "conf": 0.3535,
+      "distance": 7.161136281713092,
+      "enu_east_m": 0.6116863179680082,
+      "enu_north_m": 7.134964098976137,
+      "sign_location": {
+        "latitude": 40.68945216627372,
+        "longitude": -73.34461054514973
+      },
+      "labels": [
+        "stop at"
+      ],
+      "frame": "13_snapshot.png",
+      "latitude": 40.689388,
+      "longitude": -73.3446178,
+      "timestamp": "2025-05-28T07:34:03.3861961"
+    }
+  ]
+}

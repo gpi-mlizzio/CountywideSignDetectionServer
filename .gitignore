@@ -181,4 +181,5 @@ cython_debug/
 *.pt
 
 /data
-/debug_tools
+
+secrets.js

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>All Signs – Mapbox viewer</title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/mapbox-gl@3.12.0/dist/mapbox-gl.css"
+    rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/mapbox-gl@3.12.0/dist/mapbox-gl.js"></script>
+  <style>
+    html,body{margin:0;height:100%}
+    #map{position:absolute;top:0;bottom:0;width:100%}
+    #reload{
+      position:absolute;top:10px;right:10px;z-index:2;
+      background:#fff;padding:6px 10px;border-radius:4px;
+      font:13px sans-serif;box-shadow:0 1px 5px rgba(0,0,0,.25);
+      cursor:pointer
+    }
+    #controls{
+      position:absolute;top:10px;left:10px;z-index:2;
+      background:#fff;padding:10px;border-radius:4px;
+      font:13px sans-serif;box-shadow:0 1px 5px rgba(0,0,0,.25);
+      max-width:220px
+    }
+    #controls select{width:100%;margin-bottom:6px}
+    #legend div{display:flex;align-items:center;margin:3px 0}
+    #legend span.swatch{
+      display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:6px
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="reload">Reload signs</div>
+  <div id="controls">
+    <strong>Filter by capture&nbsp;ID</strong><br/>
+    <select id="filterSelect"><option value="">Loading…</option></select>
+    <strong>Legend</strong>
+    <div id="legend"></div>
+  </div>
+
+  <script type="module" src="./secrets.js"></script>
+  <script type="module">
+    import { MAPBOX_TOKEN } from './secrets.js';
+    mapboxgl.accessToken = MAPBOX_TOKEN;
+
+    const srcId = 'signs';
+    const palette = [
+      '#e6194b','#3cb44b','#ffe119','#4363d8','#f58231','#911eb4',
+      '#46f0f0','#f032e6','#bcf60c','#fabebe','#008080','#e6beff',
+      '#9a6324','#fffac8','#800000','#aaffc3','#808000','#ffd8b1'
+    ];
+    let map, captureColors={}, features=[], prevFingerprint='';
+    const colorFor = id=>{
+      if(!captureColors[id])
+        captureColors[id]=palette[Object.keys(captureColors).length%palette.length];
+      return captureColors[id];
+    };
+    const toLngLat=([lat,lon])=>[lon,lat];
+
+    /* ── UI helpers ───────────────────────────── */
+    function rebuildDropdown(){
+      const sel=document.getElementById('filterSelect');
+      const cur=sel.value;
+      sel.innerHTML='<option value="">All captures</option>';
+      Object.keys(captureColors).sort().forEach(cid=>{
+        sel.add(new Option(cid,cid));
+      });
+      sel.value=cur||sel.options[1]?.value||'';
+    }
+    function rebuildLegend(){
+      const holder=document.getElementById('legend');
+      holder.innerHTML='';
+      const show=document.getElementById('filterSelect').value;
+      const ids=show?[show]:Object.keys(captureColors);
+      ids.sort().forEach(cid=>{
+        const div=document.createElement('div');
+        div.innerHTML=`<span class="swatch" style="background:${captureColors[cid]}"></span>${cid}`;
+        holder.appendChild(div);
+      });
+    }
+    function fingerprint(obj){
+      // cheap change detector – stringify sorted keys
+      return JSON.stringify(obj, Object.keys(obj).sort());
+    }
+
+    /* ── fetch + redraw ───────────────────────── */
+    async function loadCombined(){
+      const res=await fetch('./combined_signs.json',{cache:'no-store'});
+      if(!res.ok) throw new Error('combined_signs.json missing');
+      const json=await res.json();
+      const fp=fingerprint(json);
+      if(fp===prevFingerprint) return;             // nothing changed
+      prevFingerprint=fp;
+
+      // reset palette only on real data change
+      captureColors={};
+      features=Object.entries(json).map(([sid,d])=>({
+        type:'Feature',
+        geometry:{type:'Point',coordinates:toLngLat([d.latitude,d.longitude])},
+        properties:{
+          signId:sid,capture:d.capture_id??'—',
+          width:d.estimated_width_inches,height:d.estimated_height_inches,
+          color:colorFor(d.capture_id??'—')
+        }
+      }));
+
+      // newest capture = lexicographically last
+      const newest=Object.keys(captureColors).sort().pop();
+      const sel=document.getElementById('filterSelect');
+      if(!sel.value) sel.value=newest||'';
+
+      updateMap();          // only redraw source/layers
+      rebuildDropdown();
+      rebuildLegend();
+    }
+
+    function updateMap(){
+      if(!map) return;
+      const flt=document.getElementById('filterSelect').value;
+      const subset=flt?features.filter(f=>f.properties.capture===flt):features;
+      const geo={type:'FeatureCollection',features:subset};
+      const src=map.getSource(srcId);
+      if(src) src.setData(geo);
+      else {
+        map.addSource(srcId,{type:'geojson',data:geo});
+        map.addLayer({
+          id:srcId,type:'circle',source:srcId,
+          paint:{
+            'circle-radius':10,
+            'circle-color':['get','color'],
+            'circle-stroke-width':1,
+            'circle-stroke-color':'#000'
+          }
+        });
+        map.on('click',srcId,e=>{
+          const p=e.features[0].properties;
+          new mapboxgl.Popup()
+            .setLngLat(e.lngLat)
+            .setHTML(
+              `<strong>Sign ${p.signId}</strong><br/>
+               Capture: ${p.capture}<br/>
+               ${p.width.toFixed(1)}″ × ${p.height.toFixed(1)}″`)
+            .addTo(map);
+        });
+        map.on('mouseenter',srcId,()=>map.getCanvas().style.cursor='pointer');
+        map.on('mouseleave',srcId,()=>map.getCanvas().style.cursor='');
+      }
+    }
+
+    /* ── init map ─────────────────────────────── */
+    function init(){
+      map=new mapboxgl.Map({
+        container:'map',
+        style:'mapbox://styles/mapbox/satellite-streets-v12',
+        center:[-73.3446,40.6893],
+        zoom:19
+      });
+      map.on('load',loadCombined);
+    }
+
+    /* ── hooks ────────────────────────────────── */
+    document.getElementById('reload').onclick = loadCombined;
+    document.getElementById('filterSelect').onchange = updateMap;
+    init();
+    setInterval(loadCombined,30000);   // 30 s polling, no camera jump
+  </script>
+</body>
+</html>

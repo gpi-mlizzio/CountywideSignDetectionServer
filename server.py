@@ -83,44 +83,33 @@ def handle_client(conn: socket.socket, addr):
             conn.sendall(struct.pack("!i", 0))
             return
         
-        elif msg_t == TYPE_PROCESS_DETECTIONS:
+        if msg_t == TYPE_PROCESS_DETECTIONS:
             capture_id = meta["capture_id"]
             sign_id    = meta["sign_id"]
             print(f"[{addr}] PROCESS_DETECTIONS for capture {capture_id}, sign {sign_id}", flush=True)
 
-            # locate
             track_dir = BASE_DIR / "data" / "tracks" / f"track_{capture_id}"
             det_file  = track_dir / "detections.json"
-            # print(f"[{addr}]    Looking for {det_file}", flush=True)
             if not det_file.exists():
                 print(f"[{addr}] detections.json missing → abort", flush=True)
                 conn.sendall(struct.pack("!i", 0))
                 return
 
-            # load
             with det_file.open() as f:
                 detections = json.load(f)
-            # triangulate
-            # print(f"[{addr}]    Running sign_triangulator.Locator.main()", flush=True)
-            locator = Locator()
+
+            locator   = Locator()
             augmented = locator.main(detections_path=str(det_file))
-            # print(f"[{addr}]    Triangulation complete; augmented keys: {augmented}", flush=True)
 
-            # dimension summary
-            # print(f"[{addr}]    Running sign_dimensions.DetectionSummary.process()", flush=True)
             summarizer = DetectionSummary()
-            summary = summarizer.process(augmented)
-            # print(f"[{addr}]    Dimension summary computed; sign IDs: {summary}", flush=True)
+            summary    = summarizer.process(augmented)
 
-            # inject into memory
             sign_key = str(sign_id)
-            #print(f"[{addr}]    Injecting dims for sign {sign_key} into in-memory detections...", flush=True)
             if sign_key in summary:
                 dims = summary[sign_key]
-                for frame_name, frame_rec in detections.items():
+                for frame_rec in detections.values():
                     for det in frame_rec.get("detections", []):
                         if det.get("id") == sign_id:
-                            # print(f"[{addr}]      Frame {frame_name}: tagging det {det} with dims {dims}", flush=True)
                             det.update({
                                 "distance": dims.get("distance", det.get("distance")),
                                 "enu_east_m": dims.get("enu_east_m", det.get("enu_east_m")),
@@ -132,17 +121,32 @@ def handle_client(conn: socket.socket, addr):
                                 "estimated_height_inches": dims["estimated_height_inches"],
                                 "estimated_width_inches":  dims["estimated_width_inches"]
                             })
-                # write out per-sign file
+
+                # merge into signs.json
                 sign_json = track_dir / "signs.json"
+                if sign_json.exists():
+                    try:
+                        existing = json.loads(sign_json.read_text())
+                    except json.JSONDecodeError:
+                        existing = {}
+                else:
+                    existing = {}
+
+                existing[sign_key] = {
+                    "latitude": dims["latitude"],
+                    "longitude": dims["longitude"],
+                    "estimated_height_inches": dims["estimated_height_inches"],
+                    "estimated_width_inches": dims["estimated_width_inches"]
+                }
+
                 with sign_json.open("w") as sf:
-                    json.dump({sign_key: dims}, sf, indent=2)
+                    json.dump(existing, sf, indent=2)
+                print(f"[{addr}] merged sign summary → {sign_json}", flush=True)
             else:
                 print(f"[{addr}] No summary found for sign {sign_key}", flush=True)
 
-            # reply
-            reply_dict = {sign_key: summary.get(sign_key, {})}
-            payload = json.dumps(reply_dict).encode()
-            # print(f"[{addr}]    Sending back payload: {reply_dict}", flush=True)
+            reply = { sign_key: summary.get(sign_key, {}) }
+            payload = json.dumps(reply).encode()
             conn.sendall(struct.pack("!i", len(payload)))
             conn.sendall(payload)
             print(f"[{addr}] PROCESS_DETECTIONS done", flush=True)
@@ -156,12 +160,12 @@ def handle_client(conn: socket.socket, addr):
 
         # archive raw
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-        (INCOMING_DIR / f"{stamp}.jpg").write_bytes(img_bytes)
+        # (INCOMING_DIR / f"{stamp}.jpg").write_bytes(img_bytes)
 
         if msg_t == TYPE_DETECT:
             print(f"[{addr}] DETECT", flush=True)
             boxes = predict_boxes(frame)
-            annotate_and_save(frame.copy(), boxes, str(ANNOTATED_DIR/f"{stamp}.jpg"))
+            # annotate_and_save(frame.copy(), boxes, str(ANNOTATED_DIR/f"{stamp}.jpg"))
             conn.sendall(struct.pack("!i", len(boxes)))
             for x1,y1,x2,y2 in boxes:
                 conn.sendall(struct.pack("ffff", x1,y1,x2,y2))

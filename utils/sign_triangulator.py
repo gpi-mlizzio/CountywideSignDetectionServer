@@ -231,7 +231,7 @@ class Locator:
         else:
             return None
 
-        pprint(detections)
+        # pprint(detections)
 
         # Prepare intersection methods
         methods = {
